@@ -2,7 +2,7 @@
 /Library/
 /Logs/
 /Packages/
-/ProjectSettins/
+/ProjectSettings/
 *.csproj
 *.sln
 *.meta
