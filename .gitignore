@@ -1,0 +1,9 @@
+/.vs/
+/Library/
+/Logs/
+/Packages/
+/ProjectSettins/
+*.csproj
+*.sln
+*.meta
+/Assets/Objects/
