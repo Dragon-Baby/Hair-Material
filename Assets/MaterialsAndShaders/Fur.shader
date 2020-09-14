@@ -10,6 +10,7 @@
         _FinThreshold("Fin Threshold", Range(-1, 1)) = 0.1
         _NoiseMultiplier("Multiplier", Range(0,10)) = 1
         _RimPower("Rim Power", Range(1, 256)) = 16
+        _Rigidness("Rigidness", Range(0, 1)) = 0.1
         [IntRange]_Iteration("Fur Iteretion", Range(5, 20)) = 10
         _TessellationUniform("Tessellation Uniform", Range(1, 64)) = 1
     }

@@ -11,6 +11,7 @@ struct vertexOutput
 {
     float3 worldNormal : TEXCOORD1;
     float3 worldPos : TEXCOORD2;
+    float3 previousWorldPos : TEXCOORD3;
     float2 uv : TEXCOORD0;
     float4 vertex : SV_POSITION;
     float3 normal : NORMAL;
@@ -26,6 +27,7 @@ struct geometryOutput
 {
     float3 worldNormal : TEXCOORD1;
     float3 worldPos : TEXCOORD2;
+    float3 previousWorldPos : TEXCOORD4;
     float2 uv : TEXCOORD0;
     float4 vertex : SV_POSITION;
     int index : TEXCOORD3;
@@ -43,6 +45,9 @@ float _RimPower;
 int _Iteration;
 float _FinThreshold;
 float _TessellationUniform;
+float4x4 _PreviousFrameModelMatrix;
+float4x4 _CurrentFrameInverseModelMatrix;
+float4x4 _CurrentFrameModelMatrix;
 
 // BaseVertexShader
 vertexOutput baseVert(vertexInput i)
@@ -53,6 +58,7 @@ vertexOutput baseVert(vertexInput i)
     o.normal = i.normal;
     o.worldNormal = UnityObjectToWorldNormal(i.normal);
     o.worldPos = mul(unity_ObjectToWorld, i.vertex).xyz;
+    o.previousWorldPos = mul(_PreviousFrameModelMatrix, i.vertex).xyz;
     return o;
 }
 
@@ -74,6 +80,7 @@ vertexOutput finsVert(vertexInput i)
     o.uv = i.uv;
     o.worldNormal = UnityObjectToWorldNormal(i.normal);
     o.worldPos = mul(unity_ObjectToWorld, i.vertex).xyz;
+    o.previousWorldPos = mul(_PreviousFrameModelMatrix, i.vertex).xyz;
     
     return o;
 }
@@ -113,7 +120,6 @@ vertexOutput finsDomain(tessellationFactors factors, OutputPatch<vertexInput, 3>
 
     MY_DOMAIN_PROGRAM_INTERPOLATE(vertex)
     MY_DOMAIN_PROGRAM_INTERPOLATE(normal)
-    //MY_DOMAIN_PROGRAM_INTERPOLATE(uv)
 
     return finsVert(i);
 }
@@ -129,7 +135,7 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
     //float3 N2 = normalize(cross(IN[2].worldPos - IN[1].worldPos, IN[0].worldPos - IN[1].worldPos));
 
     float3 N1 = normalize(cross(IN[0].vertex.xyz - IN[1].vertex.xyz, IN[3].vertex.xyz - IN[1].vertex.xyz));
-    float3 N2 = normalize(cross(IN[2].vertex.xyz - IN[1].vertex.xyz, IN[0].vertex.xyz - IN[1].vertex.xyz));
+    float3 N2 = normalize(cross(IN[0].vertex.xyz - IN[1].vertex.xyz, IN[2].vertex.xyz - IN[1].vertex.xyz));
 
     float3 worldN1 = UnityObjectToWorldNormal(N1);
     float3 worldN2 = UnityObjectToWorldNormal(N2);
@@ -147,11 +153,12 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
     float eyeDotN2 = dot(viewDir2, worldN2);
 
     if(eyeDotN1 * eyeDotN2 < 0 || abs(eyeDotN1) < _FinThreshold || abs(eyeDotN2) < _FinThreshold)
-    {
+    {   
         o.vertex = UnityObjectToClipPos(IN[0].vertex);
         o.uv = TRANSFORM_TEX(IN[0].uv, _MainTex);
         o.worldNormal = UnityObjectToWorldNormal(N2);
         o.worldPos = IN[0].worldPos;
+        o.previousWorldPos = IN[0].previousWorldPos;
         o.index = 0;
         triStream.Append(o);
 
@@ -159,6 +166,7 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
         o.uv = TRANSFORM_TEX(IN[1].uv, _MainTex);
         o.worldNormal = UnityObjectToWorldNormal(N2);
         o.worldPos = IN[1].worldPos;
+        o.previousWorldPos = IN[1].previousWorldPos;
         o.index = 0;
         triStream.Append(o);
 
@@ -168,6 +176,7 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
         o.uv = TRANSFORM_TEX(IN[0].uv, _MainTex);
         o.worldNormal = UnityObjectToWorldNormal(N2);
         o.worldPos = mul(unity_ObjectToWorld, float4(pos, 1.0)).xyz;
+        o.previousWorldPos = mul(_PreviousFrameModelMatrix, float4(pos, 1.0)).xyz;
         o.index = 1;
         triStream.Append(o);
 
@@ -176,6 +185,7 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
         o.uv = TRANSFORM_TEX(IN[1].uv, _MainTex);
         o.worldNormal = UnityObjectToWorldNormal(N2);
         o.worldPos = mul(unity_ObjectToWorld, float4(pos, 1.0)).xyz;
+        o.previousWorldPos = mul(_PreviousFrameModelMatrix, float4(pos, 1.0)).xyz;
         o.index = 1;
         triStream.Append(o);
 
@@ -187,13 +197,13 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
 fixed4 finsFrag(geometryOutput i) : SV_Target
 {
     fixed alpha = tex2D(_FurNoiseTex, i.uv * _NoiseMultiplier).r;
-    fixed3 col = tex2D(_MainTex, i.uv).rgb- pow(1 - (i.index +1) * 0.1, 3) * 0.1;
+    fixed3 col = tex2D(_MainTex, i.uv).rgb - pow(1 - i.index * 0.1, 3) * 0.1;
 
     fixed3 viewDir = normalize(_WorldSpaceCameraPos.xyz - i.worldPos);
     half rim = 1.0 - saturate(dot(viewDir, i.worldNormal));
     col += pow(rim, _RimPower);
 
-    alpha = clamp(alpha - pow((i.index+1) * 0.1, 2) * _FurDensity, 0, 1);
+    alpha = clamp(alpha - pow(i.index * 0.1, 2) * _FurDensity, 0, 1);
 
     return fixed4(col, alpha);
 }
@@ -222,12 +232,18 @@ void furGeom(triangle vertexOutput IN[3], inout TriangleStream<geometryOutput> t
         {
             float3 pos = IN[j].vertex.xyz + IN[j].normal * _FurLength * i * 0.1;
             float4 gravity = float4(0,-1,0,0) * (1 -_Rigidness);
-            pos += clamp(mul(unity_ObjectToWorld,gravity).xyz, -1, 1) * pow(i * 0.1, 3) * _FurLength;
+
+            float4 vertexMotionDir = float4(mul(_CurrentFrameModelMatrix, IN[j].vertex).xyz - IN[j].previousWorldPos, 0) * (1 -_Rigidness);
+
+            float4 MotionDir = gravity - vertexMotionDir;
+
+            pos += clamp(mul(_CurrentFrameInverseModelMatrix, MotionDir).xyz, -1, 1) * pow(i * 0.1, 3) * _FurLength;
             
             o.vertex = UnityObjectToClipPos(float4(pos, 1.0));
             o.uv = TRANSFORM_TEX(IN[j].uv, _MainTex);
             o.worldNormal = UnityObjectToWorldNormal(IN[j].normal);
             o.worldPos = mul(unity_ObjectToWorld, float4(pos, 1.0)).xyz;
+            o.previousWorldPos = mul(_PreviousFrameModelMatrix, float4(pos, 1.0)).xyz;
             o.index = i;
             triStream.Append(o);
        }

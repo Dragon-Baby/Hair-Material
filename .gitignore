@@ -3,6 +3,7 @@
 /Logs/
 /Packages/
 /ProjectSettings/
+/obj/
 *.csproj
 *.sln
 *.meta
