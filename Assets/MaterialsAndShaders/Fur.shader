@@ -2,8 +2,9 @@
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
-        _FurNoiseTex ("Texture", 2D) = "white" {}
+        _MainTex ("Main Texture", 2D) = "white" {}
+        _MaskTex ("Mask Texture", 2D) = "white"{}
+        _FurNoiseTex ("Noise Texture", 2D) = "white" {}
         _FurLength("Fur Length", Range(0,1)) = 0.2
         _FurDensity("Fur Density", Range(0.1,10)) = 0.2
         _FinLength("Fin Length", Range(0,1)) = 0.2
@@ -37,8 +38,8 @@
             #pragma target 4.6
             #define MAXCOUNT 0
             #pragma vertex finsVert
-            #pragma hull finsHull
-            #pragma domain finsDomain
+            //#pragma hull finsHull
+            //#pragma domain finsDomain
             #pragma geometry finsGeom
             #pragma fragment finsFrag
             #include "FurShader.cginc"

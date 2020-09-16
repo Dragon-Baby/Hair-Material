@@ -38,6 +38,7 @@ float _FurDensity;
 float _FinLength;
 sampler2D _MainTex;
 float4 _MainTex_ST;
+sampler2D _MaskTex;
 sampler2D _FurNoiseTex;
 float _NoiseMultiplier;
 float _Rigidness;
@@ -120,7 +121,7 @@ vertexOutput finsDomain(tessellationFactors factors, OutputPatch<vertexInput, 3>
 
     MY_DOMAIN_PROGRAM_INTERPOLATE(vertex)
     MY_DOMAIN_PROGRAM_INTERPOLATE(normal)
-
+    i.uv = patch[0].uv;
     return finsVert(i);
 }
 
@@ -196,6 +197,11 @@ void finsGeom(lineadj vertexOutput IN[4], inout TriangleStream<geometryOutput> t
 // FinsFragmentShader
 fixed4 finsFrag(geometryOutput i) : SV_Target
 {
+    float mask = tex2D(_MaskTex, i.uv).r;
+    if(mask > 0.5)
+    {
+        discard;
+    }
     fixed alpha = tex2D(_FurNoiseTex, i.uv * _NoiseMultiplier).r;
     fixed3 col = tex2D(_MainTex, i.uv).rgb - pow(1 - i.index * 0.1, 3) * 0.1;
 
@@ -204,7 +210,6 @@ fixed4 finsFrag(geometryOutput i) : SV_Target
     col += pow(rim, _RimPower);
 
     alpha = clamp(alpha - pow(i.index * 0.1, 2) * _FurDensity, 0, 1);
-
     return fixed4(col, alpha);
 }
 
@@ -217,6 +222,7 @@ vertexOutput furVert(vertexInput i)
     o.normal = i.normal;
     o.worldNormal = UnityObjectToWorldNormal(i.normal);
     o.worldPos = mul(unity_ObjectToWorld, i.vertex).xyz;
+    o.previousWorldPos = mul(_PreviousFrameModelMatrix, i.vertex).xyz;
     return o;
 }
 
@@ -253,6 +259,11 @@ void furGeom(triangle vertexOutput IN[3], inout TriangleStream<geometryOutput> t
 
 fixed4 furFrag(geometryOutput i) : SV_Target
 {
+    float mask = tex2D(_MaskTex, i.uv).r;
+    if(mask > 0.5)
+    {
+        discard;
+    }
     fixed alpha = tex2D(_FurNoiseTex, i.uv * _NoiseMultiplier).r;
     fixed3 col = tex2D(_MainTex, i.uv).rgb - pow(1 - i.index * 0.1, 3) * 0.1;
 
@@ -261,6 +272,5 @@ fixed4 furFrag(geometryOutput i) : SV_Target
     col += pow(rim, _RimPower);
 
     alpha = clamp(alpha - pow(i.index * 0.1, 2) * _FurDensity, 0, 1);
-
     return fixed4(col, alpha);
 }

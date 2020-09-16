@@ -47,6 +47,10 @@ Material:
         m_Texture: {fileID: 2800000, guid: ce42c882aef10524093f4b705a6444f1, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 2800000, guid: d0d66ac7ff5acca4a835b848ebcfe6ae, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MetallicGlossMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -65,7 +69,7 @@ Material:
     - _DetailNormalMapScale: 1
     - _DstBlend: 0
     - _FinLength: 0.001
-    - _FinThreshold: 0.4
+    - _FinThreshold: 0.29
     - _FurDensity: 0.95
     - _FurLength: 0.002
     - _GlossMapScale: 1
@@ -83,7 +87,7 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
-    - _TessellationUniform: 7.3
+    - _TessellationUniform: 1
     - _UVSec: 0
     - _ZWrite: 1
     m_Colors:
